@@ -1,0 +1,71 @@
+post http://localhost:2000/createusers
+Content-Type: application/json
+
+{
+    "name":"superadmin",
+    "username":"superadmin",
+    "password":"superadmin",
+    "role":"superadmin"
+}
+
+###
+post http://localhost:2000/createusers
+Content-Type: application/json
+
+{
+    "name":"testsiswa",
+    "username":"testsiswa2",
+    "password":"testsiswa2",
+    "role":"siswa",
+    "jurusanId":1
+}
+
+###
+put http://localhost:2000/updateusers/1
+Content-Type: application/json
+
+{
+    "name":"testadmin",
+    "username":"testadmin",
+    "password":"testadmin",
+    "role":"admin",
+    "jurusanId":1
+}
+
+###
+delete http://localhost:2000/deleteusers/3
+
+###
+get http://localhost:2000/getusers
+
+###
+get http://localhost:2000/getjurusan
+
+###
+post http://localhost:2000/createjurusan
+Content-Type: application/json
+
+{
+    "namaJurusan":"X RPL1"
+}
+
+###
+post http://localhost:2000/login
+Content-Type: application/json
+
+{
+    "username": "testadmin",
+    "password": "testadmin"
+}
+
+###
+get http://localhost:2000/me
+
+###
+delete http://localhost:2000/logout
+
+###
+get http://localhost:2000/getabsenhariini
+
+###
+get http://localhost:2000/getlaporan
