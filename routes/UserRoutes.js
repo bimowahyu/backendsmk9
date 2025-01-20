@@ -15,10 +15,10 @@ const upload = multer({ dest: 'uploads/' });
 
 router.get('/getusers',verifyUsers,getUsers)
 router.get('/getusers/:id',verifyUsers,getUsersById)
-router.post('/createusers',verifyUsers,verifyUsers,createUsers)
+router.post('/createusers',verifyUsers,createUsers)
 router.put('/updateusers/:id',verifyUsers,updateUsers)
 router.put('/updateProfile/:id',verifyUsers,updateProfile)
-router.delete('/deleteusers/:id',verifyUsers,adminOnly,deleteUsers)
+router.delete('/deleteusers/:id',verifyUsers,deleteUsers)
 router.post('/registerusersfromexcel',verifyUsers,upload.single('file'),registerUsersFromExcel)
 
 

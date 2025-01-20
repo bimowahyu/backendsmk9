@@ -7,3 +7,12 @@ const db = new Sequelize('absensimagang','root','',{
 })
 
 module.exports = db
+
+// Hostname:
+// localhost
+// Database:
+// brabsenm_absensimagang
+// Username:
+// brabsenm_absensimagang
+// Password:
+// bdDqWuBnkjPv7JNdVmBs

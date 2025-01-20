@@ -13,15 +13,15 @@ post http://localhost:2000/createusers
 Content-Type: application/json
 
 {
-    "name":"testsiswa",
-    "username":"testsiswa2",
-    "password":"testsiswa2",
+    "name":"testsiswa5",
+    "username":"testsiswa5",
+    "password":"testsiswa5",
     "role":"siswa",
-    "jurusanId":1
+    "jurusanId":2
 }
 
 ###
-put http://localhost:2000/updateusers/1
+put http://localhost:2000/updateusers/7
 Content-Type: application/json
 
 {
@@ -29,11 +29,11 @@ Content-Type: application/json
     "username":"testadmin",
     "password":"testadmin",
     "role":"admin",
-    "jurusanId":1
+    "jurusanId":2
 }
 
 ###
-delete http://localhost:2000/deleteusers/3
+delete http://localhost:2000/deleteusers/9
 
 ###
 get http://localhost:2000/getusers
@@ -42,11 +42,15 @@ get http://localhost:2000/getusers
 get http://localhost:2000/getjurusan
 
 ###
+delete http://localhost:2000/deletejurusan/3
+
+
+###
 post http://localhost:2000/createjurusan
 Content-Type: application/json
 
 {
-    "namaJurusan":"X RPL1"
+    "namaJurusan":"X PM1"
 }
 
 ###
@@ -68,4 +72,16 @@ delete http://localhost:2000/logout
 get http://localhost:2000/getabsenhariini
 
 ###
-get http://localhost:2000/getlaporan
+get http://localhost:2000/getabsensi
+
+###
+put http://localhost:2000/updateabsensi/4
+Content-Type: application/json
+
+{
+ "jam_masuk": "07:00",
+  "jam_keluar": "18:00"
+}
+
+###
+delete http://localhost:2000/deletelaporan/1

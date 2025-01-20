@@ -1,4 +1,4 @@
-const User = require('../models/UserModel')
+const Users = require('../models/UserModel')
 const Jurusan = require('../models/JurusanModel')
 const multer = require('multer');
 const xlsx = require('xlsx');
@@ -8,20 +8,25 @@ const upload = multer({ dest: 'uploads/' });
 
 exports.getUsers = async (req,res) => {
     try {
-       const user = req.user;
+        const user = req.user;
 
         if (!user) return res.status(404).json({ msg: 'User not found' });
 
         let condition = {};
         if (user.role === 'admin') {
-            condition = { '$User.jurusanId$': user.jurusanId }; 
+            condition = { jurusanId: user.jurusanId }
         } else if (user.role === 'siswa') {
-            condition = { userId: user.id }; 
+            condition = { id: user.id }; 
         }
-        const users = await User.findAll({
+
+        const users = await Users.findAll({ 
             where: condition,
-            include: Jurusan,
+            include: [{
+                model: Jurusan,
+                attributes: ['id', 'namaJurusan']
+            }]
         });
+
         res.status(200).json({
             code: '200',
             status: 'success',
@@ -34,7 +39,7 @@ exports.getUsers = async (req,res) => {
 
 exports.getUsersById = async (req,res) => {
     try {
-        const user = await User.findOne({
+        const user = await Users.findOne({
             where: { id: req.params.id },
             include: Jurusan,
         });
@@ -56,7 +61,7 @@ exports.createUsers = async (req, res) => {
      
         if (req.userRole === 'superadmin') {
             const hashedPassword = await argon2.hash(password);
-            const newUser = await User.create({
+            const newUser = await Users.create({
                 name,
                 username,
                 password: hashedPassword,
@@ -80,7 +85,7 @@ exports.createUsers = async (req, res) => {
             }
 
             const hashedPassword = await argon2.hash(password);
-            const newUser = await User.create({
+            const newUser = await Users.create({
                 name,
                 username,
                 password: hashedPassword,
@@ -103,65 +108,80 @@ exports.createUsers = async (req, res) => {
     }
 };
 
-
-exports.updateUsers = async (req,res) => {
+exports.updateUsers = async (req, res) => {
     const { name, username, password, role, jurusanId } = req.body;
     try {
-        const user = await User.findOne({ where: { id: req.params.id } });
+        const user = await Users.findOne({ where: { id: req.params.id } });
         if (!user) return res.status(404).json({ message: 'User not found' });
+
         const finalJurusanId = role === 'superadmin' ? null : jurusanId;
-        const hashedPassword = await argon2.hash(password)
-        await user.update({
+
+        let updatedData = {
             name,
             username,
-            password:hashedPassword,
             role,
             jurusanId: finalJurusanId,
-        });
+        };
+        if (password) {
+            updatedData.password = await argon2.hash(password);
+        }
+
+        await user.update(updatedData);
+
         res.status(200).json({
             code: '200',
             status: 'success',
             data: user
         });
-        
-    } catch (error) {
-        res.status(500).json({ message: error.message });
-    }
-}
-//-----------controller update by user
-exports.updateProfile = async (req, res) => {
-    const { password } = req.body;
-    try {
-        const user = await User.findOne({ where: { id: req.params.id } });
-        if (!user) return res.status(404).json({ message: 'User not found' });
-        const updateData = {};
-        if (password) {
-            updateData.password = await argon2.hash(password);
-        }
-       
-        await user.update(updateData);
-        res.status(200).json({
-            code: '200',
-            status: 'success',
-            data: user,
-        });
+
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
 };
 
-
-exports.deleteUsers = async (req,res) => {
+exports.deleteUsers = async (req, res) => {
     try {
-        const user = await User.findOne({ where: { id: req.params.id } });
-        if (!user) return res.status(404).json({ message: 'User not found' });
-
-        await user.destroy();
+        const user = await Users.findOne({ where: { id: req.params.id } });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+    
+        await user.destroy(); 
         res.status(200).json({ message: 'User deleted successfully' });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        console.error('Error in deleteUsers:', error);
+        res.status(500).json({ message: 'Internal server error' });
     }
-}
+    
+};  
+//-----------controller update by user
+
+exports.updateProfile = async (req, res) => {
+    const { password } = req.body;
+    try {
+      const user = await Users.findOne({ where: { id: req.params.id } });
+      if (!user) return res.status(404).json({ message: 'User tidak ditemukan.' });
+  
+      if (!password) {
+        return res.status(400).json({ message: 'Password tidak boleh kosong.' });
+      }
+  
+      const hashedPassword = await argon2.hash(password);
+      await Users.update({ password: hashedPassword }, { where: { id: req.params.id } });
+  
+      res.status(200).json({
+        code: '200',
+        status: 'success',
+        message: 'Profil berhasil diperbarui.',
+        data: { id: user.id, username: user.username },
+      });
+    } catch (error) {
+      res.status(500).json({ message: 'Terjadi kesalahan server.' });
+    }
+  };
+  
+
+
 
 exports.registerUsersFromExcel = async (req, res) => {
     try {
@@ -179,7 +199,7 @@ exports.registerUsersFromExcel = async (req, res) => {
                 return res.status(400).json({ message: `Jurusan ${namaJurusan} tidak ditemukan` });
             }
             const hashedPassword = await argon2.hash('12345');
-            await User.create({
+            await Users.create({
                 name,
                 username,
                 password: hashedPassword,

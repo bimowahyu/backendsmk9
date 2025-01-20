@@ -65,9 +65,11 @@ exports.updateJurusan = async(req,res) => {
         })
         if(!jurusan)
             return res.status(404).json({msg: 'jurusan tidak di temukan'})
-        await Jurusan.update({
-            namaJurusan: req.body.namaJurusan
-        });
+        await Jurusan.update(
+            { namaJurusan: req.body.namaJurusan }, 
+            { where: { id: req.params.id } }
+        );
+        
         return res.status(200).json({
             status: 'success',
             kode:'200',
@@ -89,7 +91,7 @@ exports.deleteJurusan = async(req,res) => {
             return res.status(404).json({msg: 'jurusan tidak di temukan'})
         await Jurusan.destroy({
             where:{
-                id: req.jurusan.id   
+                id: jurusan.id 
             }
         })
         return res.status(203).json({
