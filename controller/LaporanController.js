@@ -7,70 +7,11 @@ const fs = require('fs').promises;
 const path = require('path');
 const Jurusan = require('../models/JurusanModel')
 
-// exports.getLaporan = async (req, res) => {
-//     try {
-//         const user = req.user;
-
-//         if (!user) return res.status(404).json({ msg: 'User not found' });
-
-//         let whereCondition = {};
-//         let includeCondition = [{
-//             model: Users,
-//             attributes: ['name', 'username', 'jurusanId'],
-//             include: {
-//                 model: Jurusan,
-//                 attributes: ['id', 'namaJurusan']
-//             }
-//         }];
-
-//         if (user.role === 'admin') {
-//             includeCondition = [{
-//                 model: Users,
-//                 attributes: ['name', 'username', 'jurusanId'],
-//                 where: { jurusanId: user.jurusanId },
-//                 include: {
-//                     model: Jurusan,
-//                     attributes: ['id', 'namaJurusan']
-//                 }
-//             }];
-//         } else if (user.role === 'siswa') {
-//             whereCondition = { userId: user.id };
-//         }
-
-//         const laporan = await Laporan.findAll({
-//             where: whereCondition,
-//             include: includeCondition,
-//             order: [['tgl_pembuatan', 'DESC']]
-//         });
-
-//         const calculateLaporan = laporan.length;
-
-//         return res.status(200).json({
-//             code: '200',
-//             status: 'success',
-//             data: laporan,
-//             totalLaporan: calculateLaporan
-//         });
-//     } catch (error) {
-//         console.error('Error:', error);
-//         return res.status(500).json({ msg: error.message });
-//     }
-// };
-
-//pgination
 exports.getLaporan = async (req, res) => {
     try {
         const user = req.user;
 
         if (!user) return res.status(404).json({ msg: 'User not found' });
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10; 
-
-        if (page < 1 || limit < 1) {
-            return res.status(400).json({ msg: 'Page and limit must be greater than 0' });
-        }
-
-        const offset = (page - 1) * limit;
 
         let whereCondition = {};
         let includeCondition = [{
@@ -95,38 +36,97 @@ exports.getLaporan = async (req, res) => {
         } else if (user.role === 'siswa') {
             whereCondition = { userId: user.id };
         }
-        const totalLaporan = await Laporan.count({
-            where: whereCondition,
-            include: includeCondition,
-        });
 
         const laporan = await Laporan.findAll({
             where: whereCondition,
             include: includeCondition,
-            order: [['tgl_pembuatan', 'DESC']],
-            limit: limit,
-            offset: offset,
+            order: [['tgl_pembuatan', 'DESC']]
         });
 
-        const totalPages = Math.ceil(totalLaporan / limit);
-         return res.status(200).json({
+        const calculateLaporan = laporan.length;
+
+        return res.status(200).json({
             code: '200',
             status: 'success',
             data: laporan,
-            totalLaporan: totalLaporan,
-            meta: {
-               
-                totalPages: totalPages,
-                currentPage: page,
-                perPage: limit,
-            },
-           
+            totalLaporan: calculateLaporan
         });
     } catch (error) {
         console.error('Error:', error);
         return res.status(500).json({ msg: error.message });
     }
 };
+
+//pgination
+// exports.getLaporan = async (req, res) => {
+//     try {
+//         const user = req.user;
+
+//         if (!user) return res.status(404).json({ msg: 'User not found' });
+//         const page = parseInt(req.query.page) || 1;
+//         const limit = parseInt(req.query.limit) || 10; 
+
+//         if (page < 1 || limit < 1) {
+//             return res.status(400).json({ msg: 'Page and limit must be greater than 0' });
+//         }
+
+//         const offset = (page - 1) * limit;
+
+//         let whereCondition = {};
+//         let includeCondition = [{
+//             model: Users,
+//             attributes: ['name', 'username', 'jurusanId'],
+//             include: {
+//                 model: Jurusan,
+//                 attributes: ['id', 'namaJurusan']
+//             }
+//         }];
+
+//         if (user.role === 'admin') {
+//             includeCondition = [{
+//                 model: Users,
+//                 attributes: ['name', 'username', 'jurusanId'],
+//                 where: { jurusanId: user.jurusanId },
+//                 include: {
+//                     model: Jurusan,
+//                     attributes: ['id', 'namaJurusan']
+//                 }
+//             }];
+//         } else if (user.role === 'siswa') {
+//             whereCondition = { userId: user.id };
+//         }
+//         const totalLaporan = await Laporan.count({
+//             where: whereCondition,
+//             include: includeCondition,
+//         });
+
+//         const laporan = await Laporan.findAll({
+//             where: whereCondition,
+//             include: includeCondition,
+//             order: [['tgl_pembuatan', 'DESC']],
+//             limit: limit,
+//             offset: offset,
+//         });
+
+//         const totalPages = Math.ceil(totalLaporan / limit);
+//          return res.status(200).json({
+//             code: '200',
+//             status: 'success',
+//             data: laporan,
+//             totalLaporan: totalLaporan,
+//             meta: {
+               
+//                 totalPages: totalPages,
+//                 currentPage: page,
+//                 perPage: limit,
+//             },
+           
+//         });
+//     } catch (error) {
+//         console.error('Error:', error);
+//         return res.status(500).json({ msg: error.message });
+//     }
+// };
 
 exports.getLaporanById = async (req, res) => {
     try {

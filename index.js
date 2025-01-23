@@ -39,7 +39,9 @@ app.use(session({
     saveUninitialized: true,
     store: store,
     cookie: {
-        secure: 'auto'
+        secure: 'auto',
+        maxAge: 10 * 60 * 1000 //10menit
+
     }
 }));
 app.use(fileUpload({
