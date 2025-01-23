@@ -9,6 +9,7 @@ router.get('/getlaporan/periode',verifyUsers, LaporanController.getLaporanById);
 router.post('/createlaporan',verifyUsers, LaporanController.createLaporan);
 router.put('/updatelaporan/:id', verifyUsers,LaporanController.updateLaporan);
 router.delete('/deletelaporan/:id', verifyUsers,LaporanController.deleteLaporan);
+router.get('/downloadpdf', verifyUsers,LaporanController.downloadPdf);
 
 module.exports = router
 

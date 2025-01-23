@@ -6,36 +6,56 @@ const argon2 = require('argon2');
 
 const upload = multer({ dest: 'uploads/' });
 
-exports.getUsers = async (req,res) => {
+exports.getUsers = async (req, res) => {
     try {
         const user = req.user;
 
-        if (!user) return res.status(404).json({ msg: 'User not found' });
+        if (!user) {
+            return res.status(404).json({ msg: 'User not found' });
+        }
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10; 
+
+        if (page < 1 || limit < 1) {
+            return res.status(400).json({ msg: 'Page and limit must be greater than 0' });
+        }
+
+        const offset = (page - 1) * limit;
 
         let condition = {};
         if (user.role === 'admin') {
-            condition = { jurusanId: user.jurusanId }
+            condition = { jurusanId: user.jurusanId };
         } else if (user.role === 'siswa') {
-            condition = { id: user.id }; 
+            condition = { id: user.id };
         }
 
-        const users = await Users.findAll({ 
+        const { count, rows: users } = await Users.findAndCountAll({
             where: condition,
             include: [{
                 model: Jurusan,
                 attributes: ['id', 'namaJurusan']
-            }]
+            }],
+            limit: limit,
+            offset: offset,
         });
+
+        const totalPages = Math.ceil(count / limit);
 
         res.status(200).json({
             code: '200',
             status: 'success',
-            data: users
+            data: users,
+            meta: {
+                totalItems: count,
+                currentPage: page,
+                totalPages: totalPages,
+                limit: limit,
+            }
         });
     } catch (error) {
         res.status(500).json({ message: error.message });
     }
-}
+};
 
 exports.getUsersById = async (req,res) => {
     try {
