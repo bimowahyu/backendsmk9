@@ -1,5 +1,6 @@
 const express = require('express')
 const cors = require("cors");
+const multer = require('multer');
 const path = require("path");
 const db = require('./config/Database')
 const moment = require('moment-timezone');
@@ -40,7 +41,7 @@ app.use(session({
     store: store,
     cookie: {
         secure: 'auto',
-        maxAge: 10 * 60 * 1000 //10menit
+      //  maxAge: 10 * 60 * 1000 //10menit
 
     }
 }));

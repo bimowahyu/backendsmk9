@@ -1,10 +1,10 @@
 const Users = require('../models/UserModel')
 const Jurusan = require('../models/JurusanModel')
-const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const xlsx = require('xlsx');
 const argon2 = require('argon2');
-
-const upload = multer({ dest: 'uploads/' });
+const multer = require('multer')
 
 exports.getUsers = async (req, res) => {
     try {
@@ -200,36 +200,87 @@ exports.updateProfile = async (req, res) => {
     }
   };
   
-
-
-
-exports.registerUsersFromExcel = async (req, res) => {
+exports.uploadUser = async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ message: 'File Excel tidak ditemukan' });
+        if (!req.files || Object.keys(req.files).length === 0) {
+            return res.status(400).json({ msg: 'No files were uploaded.' });
         }
-        const workbook = xlsx.readFile(req.file.path);
+
+        const file = req.files.file;
+        const ext = path.extname(file.name).toLowerCase();
+        const allowedType = ['.xlsx', '.xls'];
+
+        if (!allowedType.includes(ext)) {
+            return res.status(400).json({ msg: 'Only excel files are allowed.' });
+        }
+
+        const workbook = xlsx.read(file.data, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const data = xlsx.utils.sheet_to_json(sheet);
-        for (const row of data) {
-            const { name, username, role, namaJurusan } = row;
-            const jurusan = await Jurusan.findOne({ where: { namaJurusan } });
-            if (!jurusan && role !== 'admin') {
-                return res.status(400).json({ message: `Jurusan ${namaJurusan} tidak ditemukan` });
-            }
-            const hashedPassword = await argon2.hash('12345');
-            await Users.create({
-                name,
-                username,
-                password: hashedPassword,
-                role,
-                jurusanId: jurusan ? jurusan.id : null,
-            });
-        }
 
-        res.status(201).json({ message: 'User berhasil diimport dari file Excel' });
+        const successUsers = [];
+        const errorUsers = [];
+
+        for (const row of data) {
+            const { name, username, namaJurusan } = row;
+
+            if (!name || !username || !namaJurusan) {
+                errorUsers.push({ 
+                    data: row, 
+                    error: 'Incomplete data' 
+                });
+                continue;
+            }
+
+            try {
+                let jurusan = await Jurusan.findOne({ 
+                    where: { namaJurusan } 
+                });
+
+                if (!jurusan) {
+                    jurusan = await Jurusan.create({ namaJurusan });
+                }
+
+                // Check if user already exists
+                const existingUser = await Users.findOne({ 
+                    where: { username } 
+                });
+
+                if (existingUser) {
+                    errorUsers.push({ 
+                        data: row, 
+                        error: 'Username already exists' 
+                    });
+                    continue;
+                }
+                const hashedPassword = await argon2.hash('12345');
+                const newUser = await Users.create({
+                    name,
+                    username,
+                    password: hashedPassword,
+                    role: 'siswa',
+                    jurusanId: jurusan.id
+                });
+
+                successUsers.push(newUser);
+
+            } catch (userError) {
+                errorUsers.push({ 
+                    data: row, 
+                    error: userError.message 
+                });
+            }
+        }
+        res.status(201).json({
+            status: 201,
+            message: 'User upload processed',
+            successCount: successUsers.length,
+            errorCount: errorUsers.length,
+            errors: errorUsers
+        });
+
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ msg: error.message });
     }
 };

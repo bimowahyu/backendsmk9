@@ -36,7 +36,7 @@ Content-Type: application/json
 delete http://localhost:2000/deleteusers/9
 
 ###
-get http://localhost:2000/getusers
+get http://localhost:2000/getusers?page=1&limit=10
 
 ###
 get http://localhost:2000/getjurusan
@@ -58,8 +58,8 @@ post http://localhost:2000/login
 Content-Type: application/json
 
 {
-    "username": "testadmin",
-    "password": "testadmin"
+    "username": "superadmin",
+    "password": "superadmin"
 }
 
 ###
@@ -72,7 +72,7 @@ delete http://localhost:2000/logout
 get http://localhost:2000/getabsenhariini
 
 ###
-get http://localhost:2000/getabsensi
+get http://localhost:2000/getabsensi?page=1&limit=25
 
 ###
 put http://localhost:2000/updateabsensi/4
@@ -85,3 +85,6 @@ Content-Type: application/json
 
 ###
 delete http://localhost:2000/deletelaporan/1
+
+###
+get http://localhost:2000/getlaporan
