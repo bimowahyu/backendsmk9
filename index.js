@@ -14,6 +14,7 @@ const LaporanRoutes = require('./routes/LaporanRoutes')
 const UserRoutes = require('./routes/UserRoutes')
 const AuthRoute = require('./routes/AuthRoutes')
 const fs = require('fs').promises;
+const helmet = require('helmet')
 
 
 const app = express()
@@ -27,12 +28,21 @@ const store = new SequelizeStoreSession({
 // (async() => {
 //    await db.sync();
 // })();
+
+app.use(helmet({
+    contentSecurityPolicy: false, 
+    crossOriginEmbedderPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+}));
+
 app.use(cors({
     origin: true,//'http://localhost:3000',
     methods: ['GET', 'POST', 'PUT', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true
 }));
+
+
 
 app.use(session({
     secret: SESS_SECRET,
@@ -45,6 +55,7 @@ app.use(session({
 
     }
 }));
+
 app.use(fileUpload({
     createParentPath: true,
     limits: { fileSize: 5 * 1024 * 1024 }, //  5 MB

@@ -250,7 +250,7 @@ function convertToGMT7(dateString) {
 //     };
 // }
 const isValidWorkingHour = (jam) => {
-    const start = moment('07:00:00', 'HH:mm:ss');
+    const start = moment('00:00:00', 'HH:mm:ss');
     const end = moment('17:00:00', 'HH:mm:ss');
     const current = moment(jam, 'HH:mm:ss');
     return current.isBetween(start, end, null, '[]');
