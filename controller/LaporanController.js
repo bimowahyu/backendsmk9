@@ -15,48 +15,36 @@ exports.getLaporan = async (req, res) => {
         if (!user) return res.status(404).json({ msg: 'User not found' });
 
         let whereCondition = {};
-        let includeCondition = [{
-            model: Users,
-            attributes: ['name', 'username', 'jurusanId'],
-            include: {
-                model: Jurusan,
-                attributes: ['id', 'namaJurusan']
-            }
-        }];
 
         if (user.role === 'admin') {
-            includeCondition = [{
-                model: Users,
-                attributes: ['name', 'username', 'jurusanId'],
-                where: { jurusanId: user.jurusanId },
-                include: {
-                    model: Jurusan,
-                    attributes: ['id', 'namaJurusan']
-                }
-            }];
+            whereCondition = { '$User.jurusanId$': user.jurusanId };
         } else if (user.role === 'siswa') {
             whereCondition = { userId: user.id };
         }
 
-        const laporan = await Laporan.findAll({
+        const totalLaporan = await Laporan.count({
             where: whereCondition,
-            include: includeCondition,
-            order: [['tgl_pembuatan', 'DESC']]
+            include: [{
+                model: Users,
+                attributes: [],
+                include: [{
+                    model: Jurusan,
+                    attributes: []
+                }]
+            }],
         });
-
-        const calculateLaporan = laporan.length;
 
         return res.status(200).json({
             code: '200',
             status: 'success',
-            data: laporan,
-            totalLaporan: calculateLaporan
+            totalLaporan: totalLaporan
         });
     } catch (error) {
         console.error('Error:', error);
         return res.status(500).json({ msg: error.message });
     }
 };
+
 
 exports.getLaporanpaginate = async (req, res) => {
     try {
