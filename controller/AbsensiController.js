@@ -250,8 +250,8 @@ function convertToGMT7(dateString) {
 //     };
 // }
 const isValidWorkingHour = (jam) => {
-    const start = moment('07:00:00', 'HH:mm:ss');
-    const end = moment('17:00:00', 'HH:mm:ss');
+    const start = moment('06:00:00', 'HH:mm:ss');
+    const end = moment('21:00:00', 'HH:mm:ss');
     const current = moment(jam, 'HH:mm:ss');
     return current.isBetween(start, end, null, '[]');
 };
@@ -270,7 +270,7 @@ exports.createAbsensi = async (req, res) => {
         if (!isValidWorkingHour(jamMasuk)) {
             return res.status(400).json({
                 status: false,
-                msg: "Absensi hanya dapat dilakukan pada jam kerja (07:00 - 17:00)"
+                msg: "Absensi hanya dapat dilakukan pada jam (06:00 - 21:00)"
             });
         }
         const existingAbsensi = await Absensi.findOne({

@@ -6,6 +6,7 @@ const argon2 = require('argon2');
 
 const upload = multer({ dest: 'uploads/' });
 
+
 exports.getUsers = async (req, res) => {
     try {
         const user = req.user;
@@ -56,6 +57,39 @@ exports.getUsers = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
+
+
+//tanpa paginaiton
+// exports.getUsers = async (req,res) => {
+//     try {
+//         const user = req.user;
+
+//         if (!user) return res.status(404).json({ msg: 'User not found' });
+
+//         let condition = {};
+//         if (user.role === 'admin') {
+//             condition = { jurusanId: user.jurusanId }
+//         } else if (user.role === 'siswa') {
+//             condition = { id: user.id }; 
+//         }
+
+//         const users = await Users.findAll({ 
+//             where: condition,
+//             include: [{
+//                 model: Jurusan,
+//                 attributes: ['id', 'namaJurusan']
+//             }]
+//         });
+
+//         res.status(200).json({
+//             code: '200',
+//             status: 'success',
+//             data: users
+//         });
+//     } catch (error) {
+//         res.status(500).json({ message: error.message });
+//     }
+// }
 
 exports.getUsersById = async (req,res) => {
     try {
@@ -166,7 +200,7 @@ exports.deleteUsers = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
     
-        await user.destroy(); 
+        await user.destroy(); // Gunakan instance model untuk menghapus
         res.status(200).json({ message: 'User deleted successfully' });
     } catch (error) {
         console.error('Error in deleteUsers:', error);
@@ -175,31 +209,26 @@ exports.deleteUsers = async (req, res) => {
     
 };  
 //-----------controller update by user
-
 exports.updateProfile = async (req, res) => {
     const { password } = req.body;
     try {
-      const user = await Users.findOne({ where: { id: req.params.id } });
-      if (!user) return res.status(404).json({ message: 'User tidak ditemukan.' });
-  
-      if (!password) {
-        return res.status(400).json({ message: 'Password tidak boleh kosong.' });
-      }
-  
-      const hashedPassword = await argon2.hash(password);
-      await Users.update({ password: hashedPassword }, { where: { id: req.params.id } });
-  
-      res.status(200).json({
-        code: '200',
-        status: 'success',
-        message: 'Profil berhasil diperbarui.',
-        data: { id: user.id, username: user.username },
-      });
+        const user = await Users.findOne({ where: { id: req.params.id } });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        const updateData = {};
+        if (password) {
+            updateData.password = await argon2.hash(password);
+        }
+       
+        await Users.update(updateData);
+        res.status(200).json({
+            code: '200',
+            status: 'success',
+            data: user,
+        });
     } catch (error) {
-      res.status(500).json({ message: 'Terjadi kesalahan server.' });
+        res.status(500).json({ message: error.message });
     }
-  };
-  
+};
 
 
 

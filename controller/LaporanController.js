@@ -1,11 +1,12 @@
 const Laporan = require('../models/LaporanModel');
 const Users = require('../models/UserModel');
-const { Op } = require('sequelize');
+const { Op, Sequelize: sequelize } = require('sequelize');
 const moment = require('moment');
 const { writeFile, unlink } = require('fs').promises;
 const fs = require('fs').promises; 
 const path = require('path');
 const Jurusan = require('../models/JurusanModel')
+
 
 exports.getLaporan = async (req, res) => {
     try {
@@ -16,40 +17,27 @@ exports.getLaporan = async (req, res) => {
         let whereCondition = {};
         let includeCondition = [{
             model: Users,
-            attributes: ['name', 'username', 'jurusanId'],
-            include: {
+            attributes: [],
+            include: [{
                 model: Jurusan,
-                attributes: ['id', 'namaJurusan']
-            }
+                attributes: []
+            }]
         }];
-
         if (user.role === 'admin') {
-            includeCondition = [{
-                model: Users,
-                attributes: ['name', 'username', 'jurusanId'],
-                where: { jurusanId: user.jurusanId },
-                include: {
-                    model: Jurusan,
-                    attributes: ['id', 'namaJurusan']
-                }
-            }];
+            includeCondition[0].where = { jurusanId: user.jurusanId };
         } else if (user.role === 'siswa') {
-            whereCondition = { userId: user.id };
+            whereCondition.userId = user.id;
         }
 
-        const laporan = await Laporan.findAll({
+        const totalLaporan = await Laporan.count({
             where: whereCondition,
             include: includeCondition,
-            order: [['tgl_pembuatan', 'DESC']]
         });
-
-        const calculateLaporan = laporan.length;
 
         return res.status(200).json({
             code: '200',
             status: 'success',
-            data: laporan,
-            totalLaporan: calculateLaporan
+            totalLaporan: totalLaporan
         });
     } catch (error) {
         console.error('Error:', error);
@@ -57,76 +45,105 @@ exports.getLaporan = async (req, res) => {
     }
 };
 
-//pgination
-// exports.getLaporan = async (req, res) => {
-//     try {
-//         const user = req.user;
+exports.getLaporanpaginate = async (req, res) => {
+    try {
+        const user = req.user;
 
-//         if (!user) return res.status(404).json({ msg: 'User not found' });
-//         const page = parseInt(req.query.page) || 1;
-//         const limit = parseInt(req.query.limit) || 10; 
+        if (!user) return res.status(404).json({ msg: 'User not found' });
 
-//         if (page < 1 || limit < 1) {
-//             return res.status(400).json({ msg: 'Page and limit must be greater than 0' });
-//         }
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 10;
+        const month = parseInt(req.query.month);
+        const year = parseInt(req.query.year);
 
-//         const offset = (page - 1) * limit;
+        if (page < 1 || limit < 1) {
+            return res.status(400).json({ msg: 'Page and limit must be greater than 0' });
+        }
 
-//         let whereCondition = {};
-//         let includeCondition = [{
-//             model: Users,
-//             attributes: ['name', 'username', 'jurusanId'],
-//             include: {
-//                 model: Jurusan,
-//                 attributes: ['id', 'namaJurusan']
-//             }
-//         }];
+        const offset = (page - 1) * limit;
 
-//         if (user.role === 'admin') {
-//             includeCondition = [{
-//                 model: Users,
-//                 attributes: ['name', 'username', 'jurusanId'],
-//                 where: { jurusanId: user.jurusanId },
-//                 include: {
-//                     model: Jurusan,
-//                     attributes: ['id', 'namaJurusan']
-//                 }
-//             }];
-//         } else if (user.role === 'siswa') {
-//             whereCondition = { userId: user.id };
-//         }
-//         const totalLaporan = await Laporan.count({
-//             where: whereCondition,
-//             include: includeCondition,
-//         });
+        let whereCondition = {};
+        let includeCondition = [{
+            model: Users,
+            attributes: ['name', 'username', 'jurusanId'],
+            include: [{
+                model: Jurusan,
+                attributes: ['id', 'namaJurusan']
+            }]
+        }];
 
-//         const laporan = await Laporan.findAll({
-//             where: whereCondition,
-//             include: includeCondition,
-//             order: [['tgl_pembuatan', 'DESC']],
-//             limit: limit,
-//             offset: offset,
-//         });
+        // Role-based filtering
+        if (user.role === 'admin') {
+            includeCondition[0].where = { jurusanId: user.jurusanId };
+        } else if (user.role === 'siswa') {
+            whereCondition.userId = user.id;
+        }
 
-//         const totalPages = Math.ceil(totalLaporan / limit);
-//          return res.status(200).json({
-//             code: '200',
-//             status: 'success',
-//             data: laporan,
-//             totalLaporan: totalLaporan,
-//             meta: {
-               
-//                 totalPages: totalPages,
-//                 currentPage: page,
-//                 perPage: limit,
-//             },
-           
-//         });
-//     } catch (error) {
-//         console.error('Error:', error);
-//         return res.status(500).json({ msg: error.message });
-//     }
-// };
+        // Month filtering
+        if (month) {
+            whereCondition.tgl_pembuatan = {
+                [Op.and]: [
+                    sequelize.where(
+                        sequelize.fn('MONTH', sequelize.col('tgl_pembuatan')), 
+                        month
+                    )
+                ]
+            };
+        }
+
+        // Year filtering
+        if (year) {
+            if (whereCondition.tgl_pembuatan) {
+                whereCondition.tgl_pembuatan[Op.and].push(
+                    sequelize.where(
+                        sequelize.fn('YEAR', sequelize.col('tgl_pembuatan')), 
+                        year
+                    )
+                );
+            } else {
+                whereCondition.tgl_pembuatan = {
+                    [Op.and]: [
+                        sequelize.where(
+                            sequelize.fn('YEAR', sequelize.col('tgl_pembuatan')), 
+                            year
+                        )
+                    ]
+                };
+            }
+        }
+
+        const totalLaporan = await Laporan.count({
+            where: whereCondition,
+            include: includeCondition,
+        });
+
+        const laporan = await Laporan.findAll({
+            where: whereCondition,
+            include: includeCondition,
+            order: [['tgl_pembuatan', 'DESC']],
+            limit: limit,
+            offset: offset,
+        });
+
+        const totalPages = Math.ceil(totalLaporan / limit);
+        
+        return res.status(200).json({
+            code: '200',
+            status: 'success',
+            data: laporan,
+            totalLaporan: totalLaporan,
+            meta: {
+                totalPages: totalPages,
+                currentPage: page,
+                perPage: limit,
+            },
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        return res.status(500).json({ msg: error.message });
+    }
+};
+
 
 exports.getLaporanById = async (req, res) => {
     try {
