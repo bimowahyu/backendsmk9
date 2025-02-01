@@ -1,11 +1,10 @@
 const Users = require('../models/UserModel')
 const Jurusan = require('../models/JurusanModel')
-const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 const xlsx = require('xlsx');
 const argon2 = require('argon2');
-
-const upload = multer({ dest: 'uploads/' });
-
+const multer = require('multer')
 
 exports.getUsers = async (req, res) => {
     try {
@@ -57,39 +56,6 @@ exports.getUsers = async (req, res) => {
         res.status(500).json({ message: error.message });
     }
 };
-
-
-//tanpa paginaiton
-// exports.getUsers = async (req,res) => {
-//     try {
-//         const user = req.user;
-
-//         if (!user) return res.status(404).json({ msg: 'User not found' });
-
-//         let condition = {};
-//         if (user.role === 'admin') {
-//             condition = { jurusanId: user.jurusanId }
-//         } else if (user.role === 'siswa') {
-//             condition = { id: user.id }; 
-//         }
-
-//         const users = await Users.findAll({ 
-//             where: condition,
-//             include: [{
-//                 model: Jurusan,
-//                 attributes: ['id', 'namaJurusan']
-//             }]
-//         });
-
-//         res.status(200).json({
-//             code: '200',
-//             status: 'success',
-//             data: users
-//         });
-//     } catch (error) {
-//         res.status(500).json({ message: error.message });
-//     }
-// }
 
 exports.getUsersById = async (req,res) => {
     try {
@@ -200,7 +166,7 @@ exports.deleteUsers = async (req, res) => {
             return res.status(404).json({ message: 'User not found' });
         }
     
-        await user.destroy(); // Gunakan instance model untuk menghapus
+        await user.destroy(); 
         res.status(200).json({ message: 'User deleted successfully' });
     } catch (error) {
         console.error('Error in deleteUsers:', error);
@@ -209,56 +175,112 @@ exports.deleteUsers = async (req, res) => {
     
 };  
 //-----------controller update by user
+
 exports.updateProfile = async (req, res) => {
     const { password } = req.body;
     try {
-        const user = await Users.findOne({ where: { id: req.params.id } });
-        if (!user) return res.status(404).json({ message: 'User not found' });
-        const updateData = {};
-        if (password) {
-            updateData.password = await argon2.hash(password);
-        }
-       
-        await Users.update(updateData);
-        res.status(200).json({
-            code: '200',
-            status: 'success',
-            data: user,
-        });
+      const user = await Users.findOne({ where: { id: req.params.id } });
+      if (!user) return res.status(404).json({ message: 'User tidak ditemukan.' });
+  
+      if (!password) {
+        return res.status(400).json({ message: 'Password tidak boleh kosong.' });
+      }
+  
+      const hashedPassword = await argon2.hash(password);
+      await Users.update({ password: hashedPassword }, { where: { id: req.params.id } });
+  
+      res.status(200).json({
+        code: '200',
+        status: 'success',
+        message: 'Profil berhasil diperbarui.',
+        data: { id: user.id, username: user.username },
+      });
     } catch (error) {
-        res.status(500).json({ message: error.message });
+      res.status(500).json({ message: 'Terjadi kesalahan server.' });
     }
-};
-
-
-
-exports.registerUsersFromExcel = async (req, res) => {
+  };
+  
+exports.uploadUser = async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({ message: 'File Excel tidak ditemukan' });
+        if (!req.files || Object.keys(req.files).length === 0) {
+            return res.status(400).json({ msg: 'No files were uploaded.' });
         }
-        const workbook = xlsx.readFile(req.file.path);
+
+        const file = req.files.file;
+        const ext = path.extname(file.name).toLowerCase();
+        const allowedType = ['.xlsx', '.xls'];
+
+        if (!allowedType.includes(ext)) {
+            return res.status(400).json({ msg: 'Only excel files are allowed.' });
+        }
+
+        const workbook = xlsx.read(file.data, { type: 'buffer' });
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const data = xlsx.utils.sheet_to_json(sheet);
-        for (const row of data) {
-            const { name, username, role, namaJurusan } = row;
-            const jurusan = await Jurusan.findOne({ where: { namaJurusan } });
-            if (!jurusan && role !== 'admin') {
-                return res.status(400).json({ message: `Jurusan ${namaJurusan} tidak ditemukan` });
-            }
-            const hashedPassword = await argon2.hash('12345');
-            await Users.create({
-                name,
-                username,
-                password: hashedPassword,
-                role,
-                jurusanId: jurusan ? jurusan.id : null,
-            });
-        }
 
-        res.status(201).json({ message: 'User berhasil diimport dari file Excel' });
+        const successUsers = [];
+        const errorUsers = [];
+
+        for (const row of data) {
+            const { name, username, namaJurusan } = row;
+
+            if (!name || !username || !namaJurusan) {
+                errorUsers.push({ 
+                    data: row, 
+                    error: 'Incomplete data' 
+                });
+                continue;
+            }
+
+            try {
+                let jurusan = await Jurusan.findOne({ 
+                    where: { namaJurusan } 
+                });
+
+                if (!jurusan) {
+                    jurusan = await Jurusan.create({ namaJurusan });
+                }
+
+                // Check if user already exists
+                const existingUser = await Users.findOne({ 
+                    where: { username } 
+                });
+
+                if (existingUser) {
+                    errorUsers.push({ 
+                        data: row, 
+                        error: 'Username already exists' 
+                    });
+                    continue;
+                }
+                const hashedPassword = await argon2.hash('12345');
+                const newUser = await Users.create({
+                    name,
+                    username,
+                    password: hashedPassword,
+                    role: 'siswa',
+                    jurusanId: jurusan.id
+                });
+
+                successUsers.push(newUser);
+
+            } catch (userError) {
+                errorUsers.push({ 
+                    data: row, 
+                    error: userError.message 
+                });
+            }
+        }
+        res.status(201).json({
+            status: 201,
+            message: 'User upload processed',
+            successCount: successUsers.length,
+            errorCount: errorUsers.length,
+            errors: errorUsers
+        });
+
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        res.status(500).json({ msg: error.message });
     }
 };

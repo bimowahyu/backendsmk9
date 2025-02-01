@@ -5,6 +5,7 @@ const {verifyUsers, adminOnly} = require('../middleware/UserMiddleware')
 const router = express.Router()
 
 router.get('/getlaporan',verifyUsers ,LaporanController.getLaporan);
+router.get('/getlaporanpaginate',verifyUsers ,LaporanController.getLaporanpaginate);
 router.get('/getlaporan/periode',verifyUsers, LaporanController.getLaporanById);
 router.post('/createlaporan',verifyUsers, LaporanController.createLaporan);
 router.put('/updatelaporan/:id', verifyUsers,LaporanController.updateLaporan);
