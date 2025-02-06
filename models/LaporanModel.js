@@ -9,7 +9,7 @@ const Laporan = db.define('laporan',{
     },
     foto_laporan:{
         type: DataTypes.STRING,
-        allowNull: false
+        allowNull: true
     },
     keterangan:{
         type: DataTypes.STRING,
